@@ -11,6 +11,6 @@ beautifulsoup4==4.12.2
 requests==2.31.0
 flask==2.3.3
 transformers==4.30.2
-torch==2.0.1
+pytorch==2.0.1
 matplotlib==3.7.2
 python-dotenv==1.0.0
