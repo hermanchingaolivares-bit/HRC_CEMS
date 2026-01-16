@@ -10,7 +10,6 @@ import os
 import pandas as pd
 import logging
 from utils import (convertir_fecha_estandar, dividir_y_agregar)
-import pandas.api.types as ptypes
 import time
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 
