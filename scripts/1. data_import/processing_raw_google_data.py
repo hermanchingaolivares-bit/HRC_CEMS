@@ -10,7 +10,6 @@ import os
 import pandas as pd
 import logging
 from utils import (convertir_fecha_estandar, dividir_y_agregar)
-import pandas.api.types as ptypes
 import time
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 
@@ -255,28 +254,19 @@ def process_amfe():
     
     if "Serie" in df.columns:
         df["SERIE"] = df["Serie"].astype(str).str.strip().str.upper()
-    else:
-        df["SERIE"] = ""
+        df.drop("Serie", axis=1, inplace=True)  # Elimina la columna original para evitar duplicados
     
     if "Fecha" in df.columns:
         df["FECHA"] = df["Fecha"].apply(convertir_fecha_estandar)
-        df["FECHA"] = pd.to_datetime(df["FECHA"], errors='coerce')
         df = df[df["FECHA"].notna()]
-    else:
-        df["FECHA"] = pd.NaT
+        df.drop("Fecha", axis=1, inplace=True)  # Elimina la columna original para evitar duplicados
     
-    
+    df["id_unico"] = df["FECHA"].dt.strftime('%Y-%m-%d') + "_" + df["SERIE"]
+
     df.columns = [col.upper() for col in df.columns]
-    cols = ["CRITICIDAD", "DOCUMENTO", "REPORTE", "FECHA", "SERIE", "ESTADO", "OBSERVACIONES"]
+    cols = ["FECHA","REPORTE","CRITICIDAD", "DOCUMENTO", "ESTADO", "SERIE", "OBSERVACIONES", "id_unico"]
     cols = [c for c in cols if c in df.columns]
     df = df[cols]
-
-    # Validar columna FECHA para crear id_unico
-    if ptypes.is_datetime64_any_dtype(df["FECHA"]):
-        df["id_unico"] = df["SERIE"] + "_" + df["FECHA"].dt.strftime('%Y-%m-%d')
-    else:
-        logging.error("La columna 'FECHA' no está en formato datetime. No se puede crear 'id_unico'.")
-        df["id_unico"] = None
     
     save_csv(df.reset_index(drop=True), "amfe_processed.csv")
 

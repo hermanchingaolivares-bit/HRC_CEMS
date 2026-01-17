@@ -181,3 +181,6 @@ data/backups/*.json
 # Ignorar datos crudos y procesados
 data/raw/
 data/processed/
+
+#ignorar bases de datos
+data/database/*.db

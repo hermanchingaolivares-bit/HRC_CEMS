@@ -15,7 +15,7 @@ import time
 
 start_time = time.time()
 # 1. Definir la ruta raíz del proyecto (3 niveles arriba del script)
-proyecto_raiz = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
+proyecto_raiz = os.path.abspath(os.path.join(os.path.dirname(__file__), '..','..',''))
 # 2. Cargar archivo .env desde la raíz del proyecto
 dotenv_path = os.path.join(proyecto_raiz, '.env')
 load_dotenv(dotenv_path)
@@ -29,10 +29,19 @@ print(f"¿Existe archivo de credenciales?: {os.path.exists(ruta_credenciales) if
 
 print(f"Ruta de credenciales cargada: {ruta_credenciales}")
 print(f"¿Existe la ruta? {os.path.exists(ruta_credenciales) if ruta_credenciales else 'Ruta no definida'}")
-
 if ruta_credenciales is None:
     logging.error("La variable de entorno 'GOOGLE_CREDENTIALS_PATH' no está definida. Verifica tu archivo .env.")
     sys.exit(1)
+
+# Si la ruta no es absoluta, unirla con la raíz del proyecto
+if not os.path.isabs(ruta_credenciales):
+    ruta_credenciales = os.path.join(proyecto_raiz, ruta_credenciales)
+
+ruta_credenciales = os.path.abspath(ruta_credenciales)
+
+print(f"Ruta absoluta de credenciales usada: {ruta_credenciales}")
+print(f"¿Existe el archivo de credenciales?: {os.path.exists(ruta_credenciales)}")
+
 if not os.path.exists(ruta_credenciales):
     logging.error(f"El archivo de credenciales no existe en: {ruta_credenciales}")
     sys.exit(1)
