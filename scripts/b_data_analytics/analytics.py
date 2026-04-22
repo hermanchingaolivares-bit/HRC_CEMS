@@ -7,14 +7,18 @@ Carga CSV raw → Análisis → CSV analytics
 import os
 import pandas as pd
 import logging
-from utils import (dividir_y_agregar)
+from scripts.a_data_import.utils import dividir_y_agregar, convertir_fecha_estandar
+from matplotlib.colors import LinearSegmentedColormap
+
+import seaborn as sns
+import matplotlib.pyplot as plt
 # CONFIG (rápida)
 
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 project_root = os.path.abspath(os.path.join(os.path.dirname(__file__), '../..'))
 raw_dir = os.path.join(project_root, 'data/raw/google_sheets')
 analytics_dir = os.path.join(project_root, 'data/processed/analytics')
-os.makedirs(analytics_dir, exist_ok=True)
+os.makedirs(analytics_dir, exist_ok=True)   
 
 def load_csv(name):
     """Carga CSV raw (1 línea)"""
@@ -32,6 +36,16 @@ def save_csv(df, name):
     path = os.path.join(analytics_dir, name)
     df.to_csv(path, index=False)
     print(f"💾 {analytics_dir}/{name}")
+    
+
+def save_png(name):
+    """Guarda la figura actual como PNG en analytics_dir."""
+    path = os.path.join(analytics_dir, name)
+    # Asegura que la carpeta existe
+    os.makedirs(os.path.dirname(path), exist_ok=True)
+    plt.savefig(path, dpi=300, bbox_inches='tight')
+    print(f"💾 {analytics_dir}/{name}")
+
 
 # 🔥 FUNCIÓN 1: OT por MES/AÑO (tu función original mejorada)
 def ot_por_año():
@@ -117,7 +131,77 @@ def ot_equipos():
     return df_final
 
 
+def ot_mes_año():
+    import calendar
 
+    # Leer CSV
+    df = load_csv('ot_raw.csv')
+    df["FECHA"] = df["FECHA"].apply(convertir_fecha_estandar)
+    df = df[df['FECHA'].notna()]
+    # Extraer año y mes
+    df['Año'] = df['FECHA'].dt.year
+    df['Mes'] = df['FECHA'].dt.month
+    
+    # Contar OTs únicos por año y mes
+    conteo = df.groupby(['Año', 'Mes'])['OT'].nunique().unstack(level=0).fillna(0)
+    conteo_int = conteo.astype(int)
+    
+    # Invertir orden para mostrar Diciembre arriba
+    conteo_int = conteo_int.iloc[::-1]
+    
+    # Mapear índices numéricos a nombres de meses en español
+    meses_nombre = ['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio',
+                   'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre']
+    # Como invertimos, invertimos la lista para que coincida el orden
+    meses_nombre_invertidos = meses_nombre[::-1]
+    
+    conteo_int.index = meses_nombre_invertidos
+    
+    sns.set(rc={"figure.figsize": (15, 8)})
+    ax = sns.heatmap(data=conteo_int, annot=True, fmt='d', linewidth=0.5, cmap='Blues')
+    ax.set_title('Suma de OT por Mes y Año')
+    ax.set_ylabel('Mes')
+    ax.set_xlabel('Año')
+    save_png('ot_mes_año_byH.png')
+    plt.show()
+
+def ot_dias_med():
+    meses_nombre = ['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio',
+                   'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre']
+
+    df = load_csv('ot_raw.csv')
+    df["FECHA"] = df["FECHA"].apply(convertir_fecha_estandar)
+    df = df[df['FECHA'].notna()]
+    df['Año'] = df['FECHA'].dt.year
+    df['Mes'] = df['FECHA'].dt.month
+    df['Día'] = df['FECHA'].dt.day
+
+    for year in [2024, 2025]:
+        df_year = df[df['Año'] == year]
+
+        # Contar OTs únicos por Mes y Día
+        conteo = df_year.groupby(['Mes', 'Día'])['OT'].nunique().unstack(level=1).fillna(0)
+        conteo_int = conteo.astype(int)
+
+        # Invertir orden de meses para que Diciembre esté arriba
+        conteo_int = conteo_int.iloc[::-1]
+
+        # Reemplazar índices numéricos por nombres de meses invertidos
+        conteo_int.index = meses_nombre[::-1]
+
+        plt.figure(figsize=(15,8))
+        ax = sns.heatmap(conteo_int, annot=True, fmt='d', linewidth=0.5,
+                         cmap='Blues', cbar_kws={'label':'Cantidad OT únicas'})
+
+        ax.set_title(f'Suma de OT  por Día y Mes - Año {year}')
+        ax.set_xlabel('Día')
+        ax.set_ylabel('Mes')
+
+        save_png(f'ot_dia_mes_{year}.png')
+        plt.show()
+        
 if __name__ == "__main__":
     # ot_año_mes=ot_por_año()
-    ot_equipos = ot_equipos()
+    # ot_equipos = ot_equipos()
+    ot_mes_año()
+    ot_dias_med()
