@@ -123,9 +123,21 @@ Google Sheets "EEMM" (API)  +  Excel HOJAS_DE_VIDA.xlsm (original en el servidor
 
 **El universo es el del año en curso y es móvil.** 781 equipos en 2026 (485 del `PMP` de EC/ER + 296 del `PMP IM>12`; los dos planes no comparten ningún equipo), contra 842 acumulados 2025-2027. Por clasificación del catastro habrían sido 1.645: la mitad de los clasificados no tiene plan. El plan se alimenta mes a mes, así que **el universo se recalcula en cada carga** y nunca se fija en una lista.
 
+**Los dos planes son excluyentes.** Un equipo está en el de acreditación (crítico o relevante) o en el de `IM>12`, nunca en ambos. La exclusividad no se controla con una restricción propia: sale de que `tipo_equipo.categoria` es obligatoria y única por tipo.
+
+**Salir del plan no es salir de inmediato.** Un equipo se sigue mostrando **hasta dos años** después de dejar el plan; si en dos años no vuelve a ninguno, pasa a registros históricos. Eso es exactamente lo que resuelve la vista `equipo_vigente`. Y **la baja saca al equipo de la vista activa, pero nunca se borra**.
+
+**Las planillas no se tocan.** No se cambia la forma de trabajar de la unidad: el ETL se adapta a los datos como vienen, no al revés. Corolario: los defectos de dato se reportan en `rechazo` para que la unidad los corrija en su planilla, y el ETL no los "arregla" por su cuenta.
+
+**La fuente va a moverse de Google Sheets a OneDrive**, sin fecha definida. La capa de extracción tiene que poder cambiar sin arrastrar a las de transformación y carga.
+
 **Lo que no cuadra se reporta, no se borra.** El ETL parte de las dos hojas PMP, resuelve la serie contra el catastro y deja constancia de las discrepancias en `rechazo` (al 17-ago-2026: 31 series con plan que no existen en el catastro, 24 con plan que figuran como `NO APLICA`). El prototipo, en cambio, filtraba **sobreescribiendo los archivos procesados en sitio** y borrando los que quedaban vacíos: no reproducir eso — escribir a un directorio de salida distinto (de ahí `data/interim/`).
 
 **`SERIE` es la clave de unión universal**, normalizada siempre con `strip` + `upper`. Una sola celda puede contener varias series separadas por espacio, `:`, `/` o `//`: hay que separarlas y expandir a una fila por equipo. Todo se lee como texto (`dtype=str`) para que pandas no infiera tipos sobre datos sucios.
+
+**La serie es única, y sus defectos son defectos de dato.** Un equipo sin serie no entra; una serie repetida se rechaza y se reporta (`SERIE_VACIA`, `SERIE_DUPLICADA`). No son casos a modelar. Y **el `NIC` no sirve de identificador de respaldo**, porque la mayoría de los equipos no tiene uno.
+
+**No toda orden de trabajo tiene equipo asociado**, y ese trabajo no se pierde: `orden_trabajo.equipo_id` admite nulo y `equipo_texto` guarda lo que escribió la unidad, para poder asociarlo después.
 
 **El `id_unico` del prototipo ya no se usa.** Se componía como `FECHA_SERIE_DOCUMENTO_TIPO`; su papel lo cumple ahora la restricción `hoja_de_vida_sin_duplicados` (`equipo_id, fecha, documento, tipo` con `NULLS NOT DISTINCT`), que hace idempotente volver a cargar la misma fuente.
 
@@ -135,33 +147,60 @@ Google Sheets "EEMM" (API)  +  Excel HOJAS_DE_VIDA.xlsm (original en el servidor
 
 ### Glosario
 
-**El glosario vigente está en Notion, no aquí**: "📖 Glosario del dominio" — https://app.notion.com/p/3bf0d2a2d70281d48d82df62c3bea663. Es la versión corregida por Herman en dos rondas el 17-ago-2026, y cubre las siglas de la unidad, las columnas de las planillas y qué hoja entra al sistema y cuál no. **Ante cualquier discrepancia con este archivo, manda Notion.** Consultarlo antes de modelar o de escribir ETL.
+**La fuente del glosario es Notion, no este archivo**: "📖 Glosario del dominio" — https://app.notion.com/p/3bf0d2a2d70281d48d82df62c3bea663, y su continuación "🧱 Modelo de datos" — https://app.notion.com/p/3bf0d2a2d702818b8469eeafd0a71df0. Cerrado y validado por Herman el 17-ago-2026. **Ante cualquier discrepancia con este archivo, manda Notion.** Consultarlo antes de modelar o de escribir ETL; el modelo de datos de esa página corresponde uno a uno con `database/schema/`.
 
-Abajo, lo mínimo para leer el código sin salir del repositorio. Cada hoja de origen produce un tipo de evento en `hoja_de_vida`:
+Abajo, lo mínimo para leer el código sin salir del repositorio.
 
-| Sigla | Significado | Tipo de evento |
+**Identificadores.** `SERIE` es el número de serie del fabricante, única por equipo; si un equipo no tiene, se le asigna un código con estructura de NIC. `NIC` es el código de inventario interno de EEMM (`CDT-R02-07`, `NEO-029-12`, `IM001-23`) y no todos lo tienen. `N° INVENTARIO` es el código de la unidad de inventario del hospital, que es otra unidad. `SUB EQUIPO` es un componente con serie propia que pertenece a otro equipo (`equipo_padre_id`).
+
+**Ubicación.** `SERVICIO CLÍNICO`, `UNIDAD` y `SERVICIO` son el mismo concepto con tres rótulos según la planilla. `RECINTO (SECTOR)` es el edificio; `RECINTO`, la sala.
+
+**Documentos.** Correlativo `SIGLA-número-año` (`AE-001-15`). Las OT son la excepción: `OT260108` = `OT` + año + correlativo.
+
+| Sigla | Significado | Tipo en `hoja_de_vida` |
 |---|---|---|
-| `EEMM` | Equipos médicos (nombre del Google Sheet) | — |
-| `CATASTRO` | Inventario de equipos: aporta atributos, no define el universo | — |
-| `PMP` | Plan de mantenimiento preventivo | — |
-| `OT` | Orden de trabajo (hoja `OT26` en 2026) | `ORDEN DE TRABAJO` |
-| `AE` | Acta de entrega | `ENTREGA` |
-| `AP` | Acta de préstamo | `PRESTAMO` |
-| `CS` | Salida a servicio técnico externo | `SALIDA A SERVICIO TECNICO` |
-| `IT` | Informe técnico | `INFORME TÉCNICO` |
-| `HDV` | Hoja de vida del equipo (fuente Excel) | — |
-| `AMFE` | Análisis modal de fallos y efectos (método, no hoja) | — |
-| `IM` | Índice de mantenimiento (`IM>12` = umbral de criticidad) | — |
-| `NIC` | Código de inventario del equipo | — |
+| `OT` | Orden de Trabajo: la falla que reporta la unidad clínica y el trabajo que hizo EEMM | tabla propia |
+| `AE` | Acta de Entrega (incluye traspasos) | `ENTREGA` |
+| `AP` | Acta de Préstamo: cesión temporal entre unidades | `PRESTAMO` |
+| `AC` | Acta de Capacitación del proveedor a la unidad | `CAPACITACION` |
+| `CS` | Certificado de Salida: trazabilidad de equipos que salen del hospital | `SALIDA_SERVICIO_TECNICO` |
+| `IT` | Informe Técnico | `INFORME_TECNICO` |
+| `GD` | Guía de Despacho: recepción desde el proveedor | `RECEPCION` |
+| `GS` | Guía de Servicio: mantenimiento hecho por la unidad; su código se anota en el `PMP` | — |
+| `SEM` | Solicitud de Equipos Médicos a la subdirección de operaciones | — |
+| `CC` | Certificado de Conformidad, para que contabilidad pague al proveedor | — |
+| `NS-TV` | Notas de Seguridad y Tecnovigilancia (fabricante o ISP) | — |
+| `LV` / `LV2` | Licitaciones vigentes: ítems adjudicados y consumo del monto | — |
 
-En `PMP`, la columna `CATEGORÍA` codifica `EC` como equipo crítico y `ER` como equipo relevante.
+**Mantenimiento.** `PMP` son **dos planes excluyentes**: el de acreditación (críticos y relevantes) y el de `IM>12`. `FP` es la fecha programada, casi siempre solo el mes; la ventana de tolerancia es `FP-1`/`FP+1`, y es lo que calcula la vista `plan_cumplimiento`. `FRECUENCIA` es la cantidad de mantenimientos al año (`1` anual, `2` semestral, `3`, `4`, o `1/2` para año por medio). `MP`/`MC` son mantenimiento preventivo y correctivo. El `ESTADO` recorre `1. ABIERTO` → `2. REALIZADO`/`REPROGRAMADO` → `3. INFORME A HDV` → `4. ENVIADO A CALIDAD` → `5. RECIBIDO DE CALIDAD` → `6. CERRADO`; la `SITUACIÓN` es el resultado de la ejecución (`EJECUTADO`, `EJECUTADO C/O`, o `NE` con su causa).
 
-Dos advertencias sobre el prototipo, que se equivocaba en ambas:
+**Criticidad.** El ministerio define **qué tipos de equipo** son críticos y relevantes con un listado de nombres; **no define índices**. `EC`/`ER` son equipo crítico y relevante (`ECER` los contrae) y son las categorías que se acreditan. El `IM` es el índice de Fennigkoh y Smith — `FUNCIÓN`, `MANTENIMIENTO`, `RIESGO FÍSICO`, `ANTECEDENTES` — y se aplica a todos los equipos; a críticos y relevantes se les asignó 22 y 19 para reunirlos en un mismo índice. `IM>12` son los equipos con índice entre 12 y 18: quedan fuera de la acreditación porque su tipo no está en el listado ministerial, pero requieren plan igual, y por eso tienen un `PMP` propio.
 
-- **La hoja `AMFE EQUIPOS` no existe** en el Sheet. `legacy/.../google_sheet_integration.py` la lee igual y se traga el error en silencio. Las fallas vienen de `GESTION DE FALLAS`.
-- **`LPF` y `NICOLE` son personas**, no siglas de documentos ni de hojas.
+**Gestión de fallas.** La planilla `AMFE` **pasó a llamarse `GESTIÓN DE FALLAS`** cuando el enfoque cambió de preventivo a reactivo. El `RPN` es Severidad × Ocurrencia × **Impacto**, donde el Impacto reemplaza a propósito a la Detección del AMFE clásico.
 
-El Sheet tiene medio centenar de hojas; solo unas pocas entran al sistema. La lista vigente está en Notion, no aquí — este archivo no la duplica para no volver a quedar desfasado.
+**Hojas de vida.** `HDV` es el historial de intervenciones, y vive en dos lugares que **no son copias**: el Excel `HOJAS_DE_VIDA.xlsm` tiene el historial profundo, con una hoja por equipo nombrada con el NIC o la serie; las hojas `HDV ECER` y `HDV IM≥12` del Sheet tienen solo el último año de algunos equipos. Cada intervención puede tener un `respaldo` documental: en críticos y relevantes está mayoritariamente físico y archivado; en los IM puede existir o no.
+
+Nota que no está en el glosario pero corrigió Herman: **`LPF` y `NICOLE` son personas**, no siglas de documentos ni de hojas.
+
+### Qué hojas entran al sistema
+
+El Sheet tiene medio centenar de hojas y solo una parte alimenta la base. La lista vigente está en Notion; esta es la de la fase 1:
+
+| Fuente | Qué aporta |
+|---|---|
+| `PMP` · `PMP IM>12` | Los dos planes; definen el universo |
+| `CATASTRO` | Atributos de los equipos |
+| `INDICES Y COSTOS` | Índice de mantenimiento por tipo de equipo → semilla de `tipo_equipo` |
+| `Datos_*` · `Agenda` · `CLAVES` | Listas maestras y contactos por servicio → semilla de `servicio_clinico` |
+| `OT26` | Órdenes de trabajo |
+| `HDV ECER` · `HDV IM≥12` · `HOJAS_DE_VIDA.xlsm` | Hojas de vida |
+| `GESTION DE FALLAS` | Fallas con RPN, criticidad y costo |
+| `EQ. DE BAJA` | Equipos dados de baja |
+| `AE` · `AP` · `CS` · `IT` · `AC` · `GD` | Documentos asociados a un equipo |
+
+Fuera de alcance por ahora: la gestión administrativa (`SEM`, `CC`, `Convenios`, `LV`, `LV2`, `NS-TV`, `PROYECTOS`), el inventario de dispositivos y accesorios (`DETALLE`, `ENTREGAS`, `RESUMEN`), y las hojas históricas o en desuso (`OT`, `PMP 2021`–`2024`, `OT PMP 2020`, `GS 2017`, `GS`, `ME`, `MP`, `SC`, `TE`, `PI`, `RE`, `Parámetros`, `Datos`, `Revisión_Protocolos`, `Anexos ACRE`, `HISTORIA`, `DashBoard`, `Funcionarios EEMM`).
+
+**La hoja `AMFE EQUIPOS` no existe.** `legacy/scripts/a_data_import/google_sheet_integration.py` la lee igual y se traga el error en silencio: es el nombre viejo de `GESTION DE FALLAS`. Su lista de hojas no es de fiar.
 
 El clustering del prototipo agrupaba texto libre en español (observaciones clínicas, problemas reportados) con TF-IDF + KMeans, usando stopwords propias del dominio hospitalario. Los archivos de salida llevaban el silhouette score en el nombre.
 
