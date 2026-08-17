@@ -202,3 +202,6 @@ reports/**
 
 # --- Borrador anterior: se versiona el codigo, no los datos ---
 legacy/data/
+
+# Foto de las planillas para consulta: binarios de varios MB, no fuente del ETL
+legacy/Planillas (Referencilaes)/

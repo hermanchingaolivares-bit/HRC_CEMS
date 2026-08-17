@@ -16,8 +16,7 @@ pydantic>=2.6                 # validación de configuración y contratos de dat
 
 # --- Base de datos (database/, core/) ---
 SQLAlchemy>=2.0
-# pyodbc>=5.1                 # descomentar si se usa SQL Server
-# psycopg[binary]>=3.1        # descomentar si se usa PostgreSQL
+psycopg[binary]>=3.1          # PostgreSQL: motor decidido en la fase 1
 
 # --- ETL: extracción (etl/extract/) ---
 gspread>=6.0
