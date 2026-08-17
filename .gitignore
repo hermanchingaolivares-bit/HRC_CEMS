@@ -171,16 +171,34 @@ marimo/_static/
 marimo/_lsp/
 __marimo__/
 
-# HRC-CEMS Project Specific
+# =========================================================
+# HRC-CEMS - Reglas del proyecto
+# =========================================================
+
+# --- Secretos (nunca al repositorio) ---
+secrets/
 .Credentials/
 credentials.json
 service-account.json
-data/backups/*.json
 *.gpg
 
-# Ignorar datos crudos y procesados
-data/raw/
-data/processed/
+# --- Datos: se ignora el contenido, se conserva la estructura ---
+data/**
+!data/**/
+!data/**/.gitkeep
 
-#ignorar bases de datos
-data/database/*.db
+logs/**
+!logs/**/
+!logs/**/.gitkeep
+
+reports/**
+!reports/**/
+!reports/**/.gitkeep
+
+# --- Bases de datos locales ---
+*.db
+*.sqlite
+*.sqlite3
+
+# --- Borrador anterior: se versiona el codigo, no los datos ---
+legacy/data/
