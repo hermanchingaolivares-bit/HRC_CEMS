@@ -4,103 +4,117 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Qué es este proyecto
 
-HRC-CEMS es el sistema de gestión de equipos médicos (EEMM) de la unidad de Ingeniería Clínica del Hospital Regional de Copiapó. El objetivo final es una web Flask desplegada en la LAN del hospital que muestre inventario, mantenimientos y análisis de fallas, alimentada por un ETL que extrae datos de Google Sheets y Excel.
+HRC-CEMS es el sistema de gestión de equipos médicos (EEMM) de la unidad de Ingeniería Clínica del Hospital Regional de Copiapó. El objetivo es una web Flask desplegada en la LAN del hospital que muestre inventario, mantenimientos y análisis de fallas, alimentada por un ETL que consolida datos de Google Sheets y Excel.
 
-El dominio, los datos y el código están **en español**: nombres de funciones, columnas y commits. Mantener esa convención.
+El dominio, el código y los commits están **en español**: nombres de funciones, columnas, mensajes. Mantener esa convención.
 
-## Estado actual: andamiaje vacío + código en `legacy/`
+## Estado actual
 
-Esto es lo primero que hay que entender antes de tocar nada:
+El proyecto está en fase de acondicionamiento. Lo que existe:
 
-- `app/`, `etl/`, `core/`, `database/`, `analytics/`, `tests/` son **directorios vacíos** (solo `.gitkeep`). La arquitectura nueva está definida pero no implementada.
-- **Todo el código que funciona está en `legacy/`**, que es el proyecto anterior archivado íntegro (scripts + sus datos + su documentación).
-- No hay app Flask, no hay base de datos, no hay tests.
+- **Estructura y configuración**: árbol de directorios, `requirements.txt`, `pyproject.toml`, `.env.example`, `.gitattributes`.
+- **Documentación**: este archivo, el `README.md` y los documentos de orientación en `legacy/`.
 
-Al implementar algo nuevo, la fuente de la lógica de negocio es `legacy/scripts/`. Portar desde ahí, no reescribir a ciegas.
+Lo que **no** existe todavía: ni ETL, ni base de datos, ni app Flask, ni pruebas. Los directorios `app/`, `etl/`, `core/`, `database/`, `analytics/` y `tests/` están vacíos (solo `.gitkeep`).
 
-`legacy/` es **autocontenido**: sus scripts calculan `project_root` como `../..` desde su propia ubicación, lo que ahora resuelve a `legacy/`, y `legacy/data/` se movió junto con ellos. Por eso siguen ejecutándose correctamente sin modificarlos. No "arreglar" esas rutas.
+### `legacy/` es referencia, no código a ejecutar
+
+Los scripts de `legacy/scripts/` son el prototipo anterior, conservado como **material de consulta del dominio**. No se ejecutan, no se mantienen y no se portan línea a línea. Están excluidos del linter (`extend-exclude` en `pyproject.toml`).
+
+Los módulos nuevos se escriben **desde cero**. Consultar `legacy/` para entender las reglas del negocio y las peculiaridades de las fuentes de datos; no para copiar implementaciones. Ver `legacy/README.md`.
+
+Corolario práctico: **no invertir esfuerzo en arreglar nada dentro de `legacy/`** — ni rutas, ni imports, ni dependencias que le falten. Que ese código no corra no es un defecto que haya que reparar.
 
 ## Entorno y comandos
 
-**Python no está en el PATH.** El intérprete es Anaconda:
+**Python no está en el PATH.** El intérprete de desarrollo es Anaconda con Python 3.13:
 
 ```bash
 C:\Users\herma\anaconda3\python.exe
 ```
 
-El autor trabaja en **Spyder** (de ahí el `.spyproject/` y scripts con código ejecutable a nivel de módulo). `environment.yml` quedó archivado en `legacy/`; el `requirements.txt` de la raíz es ahora la única fuente de verdad de dependencias.
+El proyecto declara `requires-python = ">=3.11"`. `environment.yml` quedó archivado en `legacy/`; las dependencias se gestionan con pip.
 
 ```bash
 C:\Users\herma\anaconda3\python.exe -m pip install -r requirements.txt
 ```
 
-Lint y formato (ruff está declarado en requirements; no hay configuración propia todavía):
+`requirements-ml.txt` contiene el NLP pesado (torch, transformers) y solo se instala si se retoma el clustering semántico.
+
+Lint, formato y pruebas — configurados todos en `pyproject.toml`:
 
 ```bash
 C:\Users\herma\anaconda3\python.exe -m ruff check .
 ```
 
-Tests (`tests/unit/` y `tests/integration/` existen pero están vacíos):
-
 ```bash
 C:\Users\herma\anaconda3\python.exe -m pytest
 ```
 
-Un solo test:
+Una prueba concreta:
 
 ```bash
 C:\Users\herma\anaconda3\python.exe -m pytest tests/unit/test_x.py::test_caso -v
 ```
 
-### Ejecutar el pipeline legacy
+Las pruebas que toquen Google Sheets o la base de datos van marcadas con `@pytest.mark.integration` (marcador declarado en `pyproject.toml`; `--strict-markers` está activo, así que un marcador sin declarar es un error).
 
-Desde `legacy/`, en este orden — la segunda etapa depende de los CSV que produce la primera:
+## Arquitectura objetivo
 
-```bash
-cd legacy/scripts/a_data_import && python google_sheet_integration.py && python processing_raw_google_data.py
+Separación en capas, cada una con una responsabilidad:
+
+| Directorio | Responsabilidad |
+|---|---|
+| `etl/extract/` | Lectura de fuentes: Google Sheets, Excel |
+| `etl/transform/` | Normalización y validación |
+| `etl/load/` | Carga a la base de datos |
+| `etl/contracts/` | Contratos de datos (pydantic) |
+| `core/` | Configuración, entorno, utilidades transversales |
+| `database/` | Esquema SQL, migraciones, semillas |
+| `app/` | Flask: `routes/` → `services/` → `models/`, con `templates/` y `static/` |
+| `analytics/` | Modelos de análisis y notebooks |
+
+Las rutas de Flask no deben contener lógica de negocio: reciben parámetros, llaman a un servicio y devuelven JSON o plantilla.
+
+Sobre el motor de base de datos: `legacy/GUIA_BASES_DATOS.md` recomienda **PostgreSQL** para el despliegue en el hospital, con SQLite solo para desarrollo local. `requirements.txt` trae SQLAlchemy y deja los drivers (`psycopg`, `pyodbc`) comentados para descomentar según el motor elegido.
+
+## Conocimiento del dominio a reimplementar
+
+Esto es lo que hay que rescatar del prototipo. Son las reglas que hacen funcionar el ETL, no detalles de implementación.
+
+### Flujo previsto
+
+```
+Google Sheets "EEMM" (10 hojas)  +  Excel HOJAS_DE_VIDA.xlsm
+                    │
+                    ▼  extracción
+              data/raw/
+                    │
+                    ▼  normalización, una transformación por fuente
+              data/interim/
+                    │
+                    ▼  validación contra CATASTRO
+              data/processed/  →  base de datos
+                    │
+                    ▼
+              analítica y reportes
 ```
 
-`analytics.py` es la excepción: importa `from scripts.a_data_import.utils import ...`, así que necesita `legacy/` como raíz de paquetes:
+### Reglas que hay que respetar
 
-```bash
-cd legacy && python -m scripts.b_data_analytics.analytics
-```
+**`CATASTRO` es el registro autoritativo de equipos.** Toda fila de cualquier otra fuente se valida contra el conjunto de `SERIE` presentes en el catastro; lo que no coincide se descarta. El prototipo hacía este filtrado **sobreescribiendo los archivos procesados en sitio** y borrando los que quedaban vacíos: no reproducir eso, escribir a un directorio de salida distinto (de ahí que exista `data/interim/`).
 
-## Arquitectura del ETL (el núcleo del proyecto)
+**`SERIE` es la clave de unión universal**, normalizada siempre con `strip` + `upper`. Una sola celda puede contener varias series separadas por espacio, `:`, `/` o `//`: hay que separarlas y expandir a una fila por equipo. Los CSV del hospital se leen con `dtype=str` para que pandas no infiera tipos sobre datos sucios.
 
-El flujo legacy, que es el que hay que portar a `etl/`:
+**`id_unico`** se componía como `FECHA_SERIE_DOCUMENTO_TIPO`, con la fecha en `%Y-%m-%d`. Es el candidato natural a clave primaria del esquema SQL.
 
-```
-Google Sheets "EEMM" (10 hojas)     Excel HOJAS_DE_VIDA.xlsm
-        │                                    │
-        ▼ google_sheet_integration.py        ▼ processing_raw_excel_hdv.py
-   data/raw/google_sheets/*_raw.csv
-        │
-        ▼ processing_raw_google_data.py  ── etapa 1: un process_<hoja>() por fuente
-   data/processed/*_processed.csv
-        │
-        ▼ filter_by_catastro()           ── etapa 2: SOBREESCRIBE los processed
-   data/processed/ (solo series válidas)
-        │
-        ▼ analytics.py / clustering_*.py
-   data/processed/analytics/ + clusters/
-```
+**Las fechas vienen en formato chileno** (`DD/MM/YYYY`) pero con mucha variación: el prototipo probaba doce formatos antes de caer a inferencia con día primero. La lógica está en `legacy/scripts/a_data_import/utils.py` y merece reimplementarse con pruebas.
 
-Dos decisiones de diseño que hay que respetar al portar:
+### Glosario
 
-**`CATASTRO` es el registro autoritativo de equipos.** `filter_by_catastro()` cruza todos los procesados contra el conjunto de `SERIE` válidas del catastro y **sobreescribe los archivos en sitio**, borrando los que quedan sin coincidencias. Es destructivo e idempotente solo si se re-ejecuta la etapa 1 antes. Al reimplementar, preferir un directorio de salida separado en vez de sobreescribir.
+Sin esto los nombres de columnas y hojas son indescifrables. Cada hoja de origen produce un tipo de evento:
 
-**`SERIE` es la clave de unión universal**, normalizada siempre con `.strip().str.upper()`. Un `SERIE` puede venir con varios números en una celda: `dividir_y_agregar()` los separa (por espacio, `:`, `/`, `//`) y el DataFrame se `explode`a a una fila por equipo. Todos los CSV se leen con `dtype=str` para evitar que pandas infiera tipos sobre datos sucios del hospital.
-
-**`id_unico`** se compone como `FECHA_SERIE_DOCUMENTO_TIPO` (fecha en `%Y-%m-%d`). Es el candidato natural a clave primaria al diseñar el esquema SQL.
-
-Las fechas pasan por `convertir_fecha_estandar()` (en `legacy/scripts/a_data_import/utils.py`), que prueba 12 formatos y cae a `dayfirst=True` — los datos vienen en formato chileno `DD/MM/YYYY`.
-
-## Glosario del dominio
-
-Sin esto, los nombres de columnas y archivos son indescifrables. Cada hoja de Google Sheets produce un `TIPO` de evento:
-
-| Sigla | Significado | `TIPO` asignado |
+| Sigla | Significado | Tipo de evento |
 |---|---|---|
 | `EEMM` | Equipos médicos (nombre del Google Sheet) | — |
 | `CATASTRO` | Inventario autoritativo de equipos | — |
@@ -115,34 +129,28 @@ Sin esto, los nombres de columnas y archivos son indescifrables. Cada hoja de Go
 | `IM` | Índice de mantenimiento (`IM>12` = umbral de criticidad) | — |
 | `NIC` | Código de inventario del equipo | — |
 
-En `PMP`, `CATEGORÍA` se mapea: `EC` → equipo crítico, `ER` → equipo relevante.
+En `PMP`, la columna `CATEGORÍA` codifica `EC` como equipo crítico y `ER` como equipo relevante.
 
-Los clusterings (`clustering_ot.py`, `clustering_problemas_eemm.py`) agrupan texto libre en español de `OBS CLÍNICA` / problemas reportados con TF-IDF + KMeans, con stopwords específicas del dominio hospitalario definidas en el propio script. Los archivos de salida llevan el silhouette score en el nombre (`OT_CLUSTERS_FINAL_score0.787.csv`).
+El clustering del prototipo agrupaba texto libre en español (observaciones clínicas, problemas reportados) con TF-IDF + KMeans, usando stopwords propias del dominio hospitalario. Los archivos de salida llevaban el silhouette score en el nombre.
 
-## Datos, secretos y git
+## Datos, secretos y convenciones del repositorio
 
-`.gitignore` ignora el **contenido** de `data/`, `logs/` y `reports/` pero conserva la estructura de directorios vía `.gitkeep` (patrón `data/**` + `!data/**/` + `!data/**/.gitkeep`). Al crear subdirectorios nuevos ahí, añadir su `.gitkeep`.
+`.gitignore` ignora el **contenido** de `data/`, `logs/` y `reports/` pero conserva la estructura de directorios vía `.gitkeep` (patrón `data/**` + `!data/**/` + `!data/**/.gitkeep`). Al crear subdirectorios ahí, añadir su `.gitkeep`. `legacy/data/` también está ignorado.
 
-Fuera del repo y necesarios para que el ETL corra — hay que recrearlos en cada máquina:
+Fuera del repositorio y necesarios para que el ETL funcione — hay que recrearlos en cada máquina:
 
-- `.env` con `GOOGLE_CREDENTIALS_PATH` y `EXCEL_HOJA_DE_VIDA_PATH` (rutas relativas a la raíz del proyecto)
+- `.env`, a partir de `.env.example`
 - `secrets/credentials.json`: service account de Google con acceso al Sheet `EEMM`
 
-`legacy/data/` también está ignorado: se versiona el código del borrador anterior, no sus datos.
+`.gitattributes` fija **LF** como final de línea en el repositorio. Se añadió porque el proyecto se trabaja desde varias máquinas y por la web, y sin él cada `core.autocrlf` local generaba avisos y diffs fantasma.
 
-## Trampas conocidas
-
-- `legacy/scripts/1. data_import/` es una copia **antigua** de `a_data_import/` (dos archivos difieren, ~100 líneas menos). Usar siempre `a_data_import/`.
-- `legacy/scripts/b_data_analytics/analytics.py` importa `seaborn`, que **no está en `requirements.txt`**.
-- El bloque `__main__` de `processing_raw_google_data.py` llama a `filter_by_catastro()` **dos veces** (líneas 363 y 372). Es inofensivo por idempotencia, pero no replicarlo al portar.
-- `legacy/scripts/c_database_setup/setup_db.py` y `.py` son placeholders de 113 bytes, no implementación.
-- Los scripts de clustering ejecutan código al importarse (estilo Spyder), no solo bajo `__main__`.
-- El repo vive en OneDrive, lo que ocasionalmente deja un `.git/index.lock` huérfano que bloquea git.
+El repositorio vive en OneDrive, lo que ocasionalmente deja un `.git/index.lock` huérfano que bloquea git. Si aparece sin ningún proceso git vivo, se puede borrar.
 
 ## Documentación de referencia en `legacy/`
 
-- `ORIENTACION_PROYECTO.md`: diagnóstico del estado anterior y hoja de ruta por fases (BD → API → despliegue LAN).
+- `README.md`: qué contiene el archivo y por qué se conserva.
+- `ORIENTACION_PROYECTO.md`: diagnóstico del prototipo y hoja de ruta por fases (BD → API → despliegue LAN).
 - `ESTRUCTURA_PROYECTO.md`: arquitectura propuesta con plantillas de `app.py` y `config.py`.
-- `GUIA_BASES_DATOS.md`: comparativa SQLite/PostgreSQL/MySQL con la recomendación de **PostgreSQL** y los pasos de migración CSV → BD.
+- `GUIA_BASES_DATOS.md`: comparativa SQLite/PostgreSQL/MySQL y pasos de migración.
 
-Ojo: describen la estructura *anterior* (`scripts/a_data_import/`, etc.), no la actual. El árbol de directorios raíz es la referencia válida.
+Los tres últimos describen la estructura *antigua* (`scripts/a_data_import/`, etc.). Para la estructura vigente, el árbol del `README.md` de la raíz es la referencia.

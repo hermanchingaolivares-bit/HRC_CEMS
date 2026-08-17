@@ -44,12 +44,7 @@ pytest-cov>=5.0
 ruff>=0.4                     # linter + formateador
 
 # =====================================================
-# OPCIONAL - NLP pesado (embeddings para clustering).
-# Instalar sólo si se retoma el clustering semántico:
+# OPCIONAL - NLP pesado (embeddings para clustering semántico).
+# Se declara aparte porque son descargas de varios GB:
 #   pip install -r requirements-ml.txt
-# -----------------------------------------------------
-# transformers>=4.40
-# torch>=2.2
-# sentence-transformers>=2.7
-# wordcloud>=1.9
 # =====================================================

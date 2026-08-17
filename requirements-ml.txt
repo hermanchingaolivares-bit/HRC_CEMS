@@ -1,0 +1,17 @@
+# =====================================================
+# HRC-CEMS | Dependencias opcionales de NLP
+# =====================================================
+# Solo necesarias si se implementa clustering semantico de texto libre
+# (observaciones clinicas, problemas reportados) con embeddings.
+#
+# Son descargas grandes (torch supera 2 GB). No instalar salvo que se vaya a
+# trabajar en ese modulo.
+#
+# Instalar:  pip install -r requirements-ml.txt
+# Requiere haber instalado antes requirements.txt
+# =====================================================
+
+transformers>=4.40
+torch>=2.2
+sentence-transformers>=2.7
+wordcloud>=1.9              # nubes de palabras para inspeccion visual

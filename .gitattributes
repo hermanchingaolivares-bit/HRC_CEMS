@@ -1,0 +1,41 @@
+# =========================================================
+# HRC-CEMS - Normalizacion de archivos
+# =========================================================
+# Sin este archivo, git depende de core.autocrlf de cada maquina, lo que
+# provoca avisos "LF will be replaced by CRLF" y diffs fantasma al trabajar
+# desde varios PC. Aqui la regla es explicita: LF en el repositorio.
+
+* text=auto eol=lf
+
+# --- Codigo y configuracion (LF explicito) ---
+*.py    text eol=lf
+*.md    text eol=lf
+*.txt   text eol=lf
+*.toml  text eol=lf
+*.yml   text eol=lf
+*.yaml  text eol=lf
+*.json  text eol=lf
+*.sql   text eol=lf
+*.html  text eol=lf
+*.css   text eol=lf
+*.js    text eol=lf
+*.csv   text eol=lf
+
+# --- Scripts de Windows (requieren CRLF para ejecutarse) ---
+*.bat   text eol=crlf
+*.cmd   text eol=crlf
+*.ps1   text eol=crlf
+
+# --- Binarios (git no debe tocarlos) ---
+*.xlsx  binary
+*.xlsm  binary
+*.xls   binary
+*.png   binary
+*.jpg   binary
+*.jpeg  binary
+*.gif   binary
+*.ico   binary
+*.pdf   binary
+*.db    binary
+*.sqlite binary
+*.sqlite3 binary

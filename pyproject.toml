@@ -1,0 +1,72 @@
+[project]
+name = "hrc-cems"
+version = "0.1.0"
+description = "Sistema de gestion de equipos medicos - Ingenieria Clinica, Hospital Regional de Copiapo"
+requires-python = ">=3.11"
+
+# Las dependencias se declaran en requirements.txt (y requirements-ml.txt para
+# el NLP opcional). Este archivo solo configura las herramientas.
+
+# =========================================================
+# Ruff: linter + formateador
+# =========================================================
+[tool.ruff]
+line-length = 100
+target-version = "py311"
+# legacy/ es material de referencia archivado: no se lintea ni se ejecuta.
+extend-exclude = ["legacy", "data", "logs", "reports"]
+
+[tool.ruff.lint]
+select = [
+    "E",    # pycodestyle
+    "F",    # pyflakes
+    "I",    # isort: orden de imports
+    "UP",   # pyupgrade: sintaxis moderna
+    "B",    # flake8-bugbear: errores frecuentes
+    "SIM",  # flake8-simplify
+    "PD",   # pandas-vet: malas practicas con pandas
+    "RUF",  # reglas propias de ruff
+]
+ignore = [
+    "E501",    # longitud de linea: ya la controla el formateador
+    "PD901",   # permite el nombre 'df' para DataFrames, habitual en este proyecto
+]
+
+[tool.ruff.lint.per-file-ignores]
+# En los tests se permiten asserts y fixtures sin usar aparente.
+"tests/**" = ["B011"]
+
+[tool.ruff.format]
+quote-style = "double"
+indent-style = "space"
+
+# =========================================================
+# Pytest
+# =========================================================
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+python_files = ["test_*.py"]
+python_classes = ["Test*"]
+python_functions = ["test_*"]
+addopts = [
+    "-ra",                  # resumen de fallos al final
+    "--strict-markers",     # un marcador no declarado es un error, no un aviso
+    "--import-mode=importlib",
+]
+markers = [
+    "integration: pruebas que requieren servicios externos (Google Sheets, base de datos)",
+]
+
+# =========================================================
+# Cobertura
+# =========================================================
+[tool.coverage.run]
+source = ["app", "core", "etl", "database", "analytics"]
+omit = ["*/__init__.py", "tests/*"]
+
+[tool.coverage.report]
+exclude_lines = [
+    "pragma: no cover",
+    "if __name__ == .__main__.:",
+    "if TYPE_CHECKING:",
+]
