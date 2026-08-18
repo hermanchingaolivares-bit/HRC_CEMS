@@ -6,13 +6,9 @@ Contexto: la fase 1 dejó el esquema aplicado en la base `hrc_cems`. La fase 2 l
 
 ## 1. Antes de escribir código
 
-Faltan dos dependencias en el intérprete de desarrollo:
+El proyecto corre en **un solo entorno de conda, `hrc-cems`**, con Python 3.13, donde está todo instalado: las librerías del ETL, las pruebas y el propio Spyder. Su intérprete es `C:\Users\herma\anaconda3\envs\hrc-cems\python.exe`.
 
-```
-C:\Users\herma\anaconda3\python.exe -m pip install gspread "psycopg[binary]"
-```
-
-`gspread` lee el Google Sheet; `psycopg` conecta con PostgreSQL. El resto ya está instalado.
+`requirements.txt` es la única lista de dependencias. Si falta una librería se agrega ahí; nada se instala suelto. Crear el entorno en otra máquina son dos comandos, documentados en `docs/COMO_EJECUTAR.md`.
 
 ## 2. De dónde se lee cada fuente
 

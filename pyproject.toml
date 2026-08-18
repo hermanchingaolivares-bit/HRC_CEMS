@@ -29,7 +29,6 @@ select = [
 ]
 ignore = [
     "E501",    # longitud de linea: ya la controla el formateador
-    "PD901",   # permite el nombre 'df' para DataFrames, habitual en este proyecto
 ]
 
 [tool.ruff.lint.per-file-ignores]

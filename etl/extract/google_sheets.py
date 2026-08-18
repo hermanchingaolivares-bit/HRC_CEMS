@@ -45,7 +45,7 @@ def abrir_libro() -> Any:
     except ImportError as error:  # pragma: no cover - depende del entorno
         raise RuntimeError(
             "Falta la libreria gspread. Instalala con:\n"
-            '    C:\\Users\\herma\\anaconda3\\python.exe -m pip install gspread "psycopg[binary]"'
+            '    C:\\Users\\herma\\anaconda3\\envs\\hrc-cems\\python.exe -m pip install gspread "psycopg[binary]"'
         ) from error
 
     ajustes = obtener_ajustes()

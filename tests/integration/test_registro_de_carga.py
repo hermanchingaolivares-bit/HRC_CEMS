@@ -3,7 +3,7 @@
 Van marcadas como `integration` porque necesitan PostgreSQL corriendo. Para
 ejecutarlas:
 
-    C:\\Users\\herma\\anaconda3\\python.exe -m pytest -m integration -v
+    C:\\Users\\herma\\anaconda3\\envs\\hrc-cems\\python.exe -m pytest -m integration -v
 
 Cada prueba limpia lo que crea, asi que la base queda como estaba.
 """
