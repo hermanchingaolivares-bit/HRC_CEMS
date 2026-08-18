@@ -2,7 +2,7 @@
 
 import sys
 
-INTERPRETE_DEL_PROYECTO = r"C:\Users\herma\anaconda3\envs\hrc-cems\python.exe"
+INTERPRETE_DEL_PROYECTO = r"C:\Users\herma\anaconda3\envs\cems\python.exe"
 
 # El proyecto necesita Python 3.11 o superior. La causa tipica de este error es
 # tener Spyder apuntando al entorno viejo del prototipo, que trae Python 3.9.

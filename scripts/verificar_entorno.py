@@ -32,7 +32,7 @@ if sys.version_info < (3, 11):  # noqa: UP036  se comprueba a proposito
     print()
     print("En Spyder: Herramientas -> Preferencias -> Interprete de Python ->")
     print("'Usar el siguiente interprete de Python', y elegir:")
-    print(r"    C:\Users\herma\anaconda3\envs\hrc-cems\python.exe")
+    print(r"    C:\Users\herma\anaconda3\envs\cems\python.exe")
     print("Despues, Consola -> Reiniciar kernel.")
     sys.exit(1)
 

@@ -37,10 +37,10 @@ Corolario práctico: **no invertir esfuerzo en arreglar nada dentro de `legacy/`
 
 ## Entorno y comandos
 
-**Todo vive en un solo entorno de conda: `hrc-cems`**, con Python 3.13. Ahí están las librerías del ETL, las pruebas, el linter y el propio Spyder. Nada del proyecto se instala fuera de ese entorno, y Python no está en el PATH, así que el intérprete se invoca por ruta completa:
+**Todo vive en un solo entorno de conda: `cems`**, con Python 3.13. Ahí están las librerías del ETL, las pruebas, el linter y el propio Spyder. Nada del proyecto se instala fuera de ese entorno, y Python no está en el PATH, así que el intérprete se invoca por ruta completa:
 
 ```bash
-C:\Users\herma\anaconda3\envs\hrc-cems\python.exe
+C:\Users\herma\anaconda3\envs\cems\python.exe
 ```
 
 El proyecto declara `requires-python = ">=3.11"`; `core/__init__.py` corta la ejecución con un mensaje claro si se usa un intérprete anterior, que era el error más frecuente al abrir Spyder con el entorno equivocado.
@@ -48,7 +48,7 @@ El proyecto declara `requires-python = ">=3.11"`; `core/__init__.py` corta la ej
 `requirements.txt` es la **única** lista de dependencias: si falta una librería se agrega ahí, nunca se instala suelta. `environment.yml` quedó archivado en `legacy/` y no se usa. Recrear el entorno en otra máquina son dos comandos, documentados en `docs/COMO_EJECUTAR.md`:
 
 ```bash
-conda create -n hrc-cems python=3.13 -y && conda activate hrc-cems && pip install -r requirements.txt spyder
+conda create -n cems python=3.13 -y && conda activate cems && pip install -r requirements.txt spyder
 ```
 
 `requirements-ml.txt` contiene el NLP pesado (torch, transformers) y solo se instala si se retoma el clustering semántico.
@@ -56,17 +56,17 @@ conda create -n hrc-cems python=3.13 -y && conda activate hrc-cems && pip instal
 Lint, formato y pruebas — configurados todos en `pyproject.toml`:
 
 ```bash
-C:\Users\herma\anaconda3\envs\hrc-cems\python.exe -m ruff check .
+C:\Users\herma\anaconda3\envs\cems\python.exe -m ruff check .
 ```
 
 ```bash
-C:\Users\herma\anaconda3\envs\hrc-cems\python.exe -m pytest
+C:\Users\herma\anaconda3\envs\cems\python.exe -m pytest
 ```
 
 Una prueba concreta:
 
 ```bash
-C:\Users\herma\anaconda3\envs\hrc-cems\python.exe -m pytest tests/unit/test_x.py::test_caso -v
+C:\Users\herma\anaconda3\envs\cems\python.exe -m pytest tests/unit/test_x.py::test_caso -v
 ```
 
 Las pruebas que toquen Google Sheets o la base de datos van marcadas con `@pytest.mark.integration` (marcador declarado en `pyproject.toml`; `--strict-markers` está activo, así que un marcador sin declarar es un error).

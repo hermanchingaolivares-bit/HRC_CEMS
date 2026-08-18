@@ -4,18 +4,18 @@ Guía práctica para correr el ETL desde Spyder, y dónde queda guardado cada da
 
 ## 1. El entorno del proyecto
 
-Todo el proyecto vive en **un solo entorno de conda llamado `hrc-cems`**, con Python 3.13. Ahí adentro está todo: las librerías del ETL, las pruebas, el linter y el propio Spyder. No hay nada del proyecto instalado fuera de ese entorno.
+Todo el proyecto vive en **un solo entorno de conda llamado `cems`**, con Python 3.13. Ahí adentro está todo: las librerías del ETL, las pruebas, el linter y el propio Spyder. No hay nada del proyecto instalado fuera de ese entorno.
 
 Su intérprete es:
 
 ```
-C:\Users\herma\anaconda3\envs\hrc-cems\python.exe
+C:\Users\herma\anaconda3\envs\cems\python.exe
 ```
 
 **Para abrir Spyder**, desde el *Anaconda Prompt*:
 
 ```bash
-conda activate hrc-cems
+conda activate cems
 ```
 
 y después:
@@ -24,7 +24,7 @@ y después:
 spyder
 ```
 
-Abierto así, Spyder ya usa el intérprete correcto y no hay que configurar nada. Si preferís abrirlo desde Anaconda Navigator, seleccioná primero el entorno `hrc-cems` en la lista de arriba.
+Abierto así, Spyder ya usa el intérprete correcto y no hay que configurar nada. Si preferís abrirlo desde Anaconda Navigator, seleccioná primero el entorno `cems` en la lista de arriba.
 
 **El proyecto**: *Proyectos → Abrir proyecto*, y elegir la carpeta `HRC-CEMS`. Con eso Spyder trabaja siempre desde la raíz y el explorador de archivos muestra el árbol completo.
 
@@ -33,11 +33,11 @@ Abierto así, Spyder ya usa el intérprete correcto y no hay que configurar nada
 Es lo primero que hay que hacer en el PC del hospital. Son dos comandos en el *Anaconda Prompt*:
 
 ```bash
-conda create -n hrc-cems python=3.13 -y
+conda create -n cems python=3.13 -y
 ```
 
 ```bash
-conda activate hrc-cems && pip install -r requirements.txt spyder
+conda activate cems && pip install -r requirements.txt spyder
 ```
 
 `requirements.txt` es la única lista de dependencias del proyecto: si falta algo, se agrega ahí y no se instala suelto. Después hay que recrear a mano el `.env` y `secrets/credentials.json`, que no se versionan.
@@ -105,13 +105,13 @@ El ETL abre ese archivo en **solo lectura**, así que no bloquea a quien lo est�
 Las pruebas rápidas no tocan ni Google ni la base, y corren en menos de un segundo:
 
 ```bash
-C:\Users\herma\anaconda3\envs\hrc-cems\python.exe -m pytest
+C:\Users\herma\anaconda3\envs\cems\python.exe -m pytest
 ```
 
 Las que sí usan la base de datos van aparte, porque necesitan PostgreSQL corriendo:
 
 ```bash
-C:\Users\herma\anaconda3\envs\hrc-cems\python.exe -m pytest -m integration -v
+C:\Users\herma\anaconda3\envs\cems\python.exe -m pytest -m integration -v
 ```
 
 Esas crean filas de prueba y las borran al terminar: la base queda como estaba.
