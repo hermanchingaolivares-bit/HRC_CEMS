@@ -14,6 +14,19 @@ RAIZ_PROYECTO = Path(__file__).resolve().parent.parent
 if str(RAIZ_PROYECTO) not in sys.path:
     sys.path.insert(0, str(RAIZ_PROYECTO))
 
+# El error mas frecuente al empezar en una maquina nueva es que Spyder este
+# apuntando al interprete equivocado. Se avisa aca, antes de importar nada,
+# para que salga un mensaje en vez de un traceback.
+if sys.version_info < (3, 11):  # noqa: UP036  se comprueba a proposito
+    print("Este proyecto necesita Python 3.11 o superior.")
+    print(f"El interprete en uso es {sys.version.split()[0]}: {sys.executable}")
+    print()
+    print("En Spyder: Herramientas -> Preferencias -> Interprete de Python ->")
+    print("'Usar el siguiente interprete de Python', y elegir:")
+    print(r"    C:\Users\herma\anaconda3\python.exe")
+    print("Despues, Consola -> Reiniciar kernel.")
+    sys.exit(1)
+
 from core.bitacora import configurar_bitacora  # noqa: E402
 from etl.extract import google_sheets  # noqa: E402
 

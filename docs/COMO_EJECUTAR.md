@@ -4,13 +4,24 @@ Guía práctica para correr el ETL desde Spyder, y dónde queda guardado cada da
 
 ## 1. Preparar Spyder una sola vez
 
-**El intérprete** tiene que ser el de Anaconda, que es donde están instaladas las librerías:
+**El intérprete** tiene que ser este, que es donde están instaladas las librerías:
 
 ```
 C:\Users\herma\anaconda3\python.exe
 ```
 
-En Spyder: *Herramientas → Preferencias → Intérprete de Python*. Si Spyder se abrió desde Anaconda, ya es ese y no hay nada que cambiar.
+En Spyder: *Herramientas → Preferencias → Intérprete de Python → "Usar el siguiente intérprete de Python"*, pegar esa ruta, aceptar, y después *Consola → Reiniciar kernel*.
+
+**Ojo con esto, es la trampa más fácil de pisar.** En este computador hay dos intérpretes instalados:
+
+| Intérprete | Python | Sirve |
+|---|---|---|
+| `C:\Users\herma\anaconda3\python.exe` | 3.13 | **Sí** |
+| `C:\Users\herma\anaconda3\envs\HRC-CEMS\python.exe` | 3.9 | No |
+
+El segundo es el entorno del prototipo viejo, creado con el `environment.yml` que quedó archivado en `legacy/`. Tiene el mismo nombre que el proyecto, así que es fácil elegirlo por error. No sirve: el proyecto necesita Python 3.11 o superior, y ahí ni siquiera están instaladas las librerías.
+
+Si Spyder está apuntando al equivocado, cualquier script del proyecto lo dice al arrancar y explica cómo cambiarlo. No hay que interpretar ningún error raro.
 
 **El proyecto**: *Proyectos → Abrir proyecto*, y elegir la carpeta `HRC-CEMS`. Con eso Spyder trabaja siempre desde la raíz y el explorador de archivos muestra el árbol completo.
 
@@ -100,6 +111,8 @@ Esas crean filas de prueba y las borran al terminar: la base queda como estaba.
 | `No se encontro el Excel de hojas de vida en ...` | La ruta del `.env` apunta a un archivo que no está en esta máquina |
 | `No se pudo conectar con la base de datos` | PostgreSQL apagado, o `DATABASE_URL` mal escrita |
 | `ModuleNotFoundError: No module named 'core'` | Se ejecutó un archivo suelto en vez de uno de `scripts/`. Los de `scripts/` se ubican solos |
+| `ModuleNotFoundError: No module named 'pydantic_settings'` | Spyder está usando el intérprete equivocado. Ver el punto 1 |
+| `Este proyecto necesita Python 3.11 o superior` | Lo mismo, pero ya detectado: el mensaje dice qué intérprete elegir |
 | `Falta la libreria gspread` | Falta instalar dependencias: ver el punto 1 |
 
 Cuando algo falla a mitad de una carga, la base **no queda a medias**: cada fuente se carga dentro de una sola transacción, así que o entra completa o no entra nada. El detalle de lo que pasó queda en `logs/`.
