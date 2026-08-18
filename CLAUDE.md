@@ -16,9 +16,9 @@ El dominio, el código y los commits están **en español**: nombres de funcione
 - **Esquema de la base de datos**: `database/schema/` — `01_tablas.sql`, `02_disparadores.sql`, `03_vistas.sql`. Ya aplicado en la base `hrc_cems` de PostgreSQL local: 11 tablas y 2 vistas.
 - **Documentación**: este archivo, el `README.md` y los documentos de orientación en `legacy/`.
 
-Lo que **no** existe todavía: ni ETL, ni app Flask, ni pruebas, ni migraciones versionadas, ni semillas. Los directorios `app/`, `etl/`, `core/`, `analytics/` y `tests/` están vacíos (solo `.gitkeep`), y también `database/migrations/` y `database/seeds/`.
+Lo que **no** existe todavía: ni ETL, ni app Flask, ni pruebas, ni migraciones versionadas. Los directorios `app/`, `etl/`, `core/`, `analytics/` y `tests/` están vacíos (solo `.gitkeep`), y también `database/migrations/`.
 
-El ETL necesita `tipo_equipo` y `servicio_clinico` pobladas antes de poder cargar equipos: las semillas son el primer paso de la fase 2.
+El plan completo de la fase 2 esta en `docs/PLAN_FASE_2.md`: define una sola forma de hacer cada cosa y es lo que manda al escribir el ETL. Los catalogos `tipo_equipo` y `servicio_clinico` se cargan desde las planillas como cualquier otra fuente; no hay semillas escritas a mano y `database/seeds/` queda sin uso.
 
 ### `legacy/` es referencia, no código a ejecutar
 
@@ -79,7 +79,7 @@ Separación en capas, cada una con una responsabilidad:
 | `etl/load/` | Carga a la base de datos |
 | `etl/contracts/` | Contratos de datos (pydantic) |
 | `core/` | Configuración, entorno, utilidades transversales |
-| `database/` | Esquema SQL, migraciones, semillas |
+| `database/` | Esquema SQL y migraciones |
 | `app/` | Flask: `routes/` → `services/` → `models/`, con `templates/` y `static/` |
 | `analytics/` | Modelos de análisis y notebooks |
 
@@ -190,13 +190,15 @@ El Sheet tiene medio centenar de hojas y solo una parte alimenta la base. La lis
 |---|---|
 | `PMP` · `PMP IM>12` | Los dos planes; definen el universo |
 | `CATASTRO` | Atributos de los equipos |
-| `INDICES Y COSTOS` | Índice de mantenimiento por tipo de equipo → semilla de `tipo_equipo` |
-| `Datos_*` · `Agenda` · `CLAVES` | Listas maestras y contactos por servicio → semilla de `servicio_clinico` |
+| `INDICES Y COSTOS` | Índice de mantenimiento por tipo de equipo → catalogo `tipo_equipo` |
+| `Datos_Unidades` · `Agenda` | Lista de unidades del hospital y contacto de cada una → catalogo `servicio_clinico` |
 | `OT26` | Órdenes de trabajo |
 | `HDV ECER` · `HDV IM≥12` · `HOJAS_DE_VIDA.xlsm` | Hojas de vida |
 | `GESTION DE FALLAS` | Fallas con RPN, criticidad y costo |
 | `EQ. DE BAJA` | Equipos dados de baja |
 | `AE` · `AP` · `CS` · `IT` · `AC` · `GD` | Documentos asociados a un equipo |
+
+`CLAVES` no alimenta ninguna tabla todavía: son claves de acceso y códigos de servicio **de los equipos** (`EQUIPO`, `PROBLEMA`, `CODIGO`), no contactos de unidades.
 
 Fuera de alcance por ahora: la gestión administrativa (`SEM`, `CC`, `Convenios`, `LV`, `LV2`, `NS-TV`, `PROYECTOS`), el inventario de dispositivos y accesorios (`DETALLE`, `ENTREGAS`, `RESUMEN`), y las hojas históricas o en desuso (`OT`, `PMP 2021`–`2024`, `OT PMP 2020`, `GS 2017`, `GS`, `ME`, `MP`, `SC`, `TE`, `PI`, `RE`, `Parámetros`, `Datos`, `Revisión_Protocolos`, `Anexos ACRE`, `HISTORIA`, `DashBoard`, `Funcionarios EEMM`).
 
