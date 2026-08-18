@@ -16,9 +16,16 @@ El dominio, el código y los commits están **en español**: nombres de funcione
 - **Esquema de la base de datos**: `database/schema/` — `01_tablas.sql`, `02_disparadores.sql`, `03_vistas.sql`. Ya aplicado en la base `hrc_cems` de PostgreSQL local: 11 tablas y 2 vistas.
 - **Documentación**: este archivo, el `README.md` y los documentos de orientación en `legacy/`.
 
-Lo que **no** existe todavía: ni ETL, ni app Flask, ni pruebas, ni migraciones versionadas. Los directorios `app/`, `etl/`, `core/`, `analytics/` y `tests/` están vacíos (solo `.gitkeep`), y también `database/migrations/`.
+- **Corte 0 del ETL** (la base sobre la que se apoyan los demás cortes):
+  - `core/`: `rutas.py` (dónde se guarda cada cosa), `config.py` (lee el `.env`), `bd.py`, `bitacora.py`.
+  - `etl/transform/normalizar.py`: series, fechas chilenas y números, con 74 pruebas.
+  - `etl/extract/`: `google_sheets.py` (API, todo texto) y `excel_hdv.py` (el `.xlsm` de 963 hojas).
+  - `etl/load/registro.py`: el contexto `carga_en_curso`, que abre la fila en `carga`, declara la autoría del ETL y guarda los rechazos.
+  - `scripts/verificar_entorno.py` y `scripts/leer_hoja_google.py`, pensados para correr con F5 desde Spyder.
 
-El plan completo de la fase 2 esta en `docs/PLAN_FASE_2.md`: define una sola forma de hacer cada cosa y es lo que manda al escribir el ETL. Los catalogos `tipo_equipo` y `servicio_clinico` se cargan desde las planillas como cualquier otra fuente; no hay semillas escritas a mano y `database/seeds/` queda sin uso.
+Lo que **no** existe todavía: ni las transformaciones por fuente, ni la carga de cada tabla, ni app Flask, ni migraciones versionadas. Los directorios `app/`, `analytics/` y `etl/contracts/` están vacíos, y también `database/migrations/`.
+
+Para ejecutar el proyecto desde Spyder y saber dónde queda cada dato: `docs/COMO_EJECUTAR.md`. El plan completo de la fase 2 esta en `docs/PLAN_FASE_2.md`: define una sola forma de hacer cada cosa y es lo que manda al escribir el ETL. Los catalogos `tipo_equipo` y `servicio_clinico` se cargan desde las planillas como cualquier otra fuente; no hay semillas escritas a mano y `database/seeds/` queda sin uso.
 
 ### `legacy/` es referencia, no código a ejecutar
 
@@ -78,7 +85,7 @@ Separación en capas, cada una con una responsabilidad:
 | `etl/transform/` | Normalización y validación |
 | `etl/load/` | Carga a la base de datos |
 | `etl/contracts/` | Contratos de datos (pydantic) |
-| `core/` | Configuración, entorno, utilidades transversales |
+| `core/` | Configuración, entorno, rutas de salida y registro de actividad |
 | `database/` | Esquema SQL y migraciones |
 | `app/` | Flask: `routes/` → `services/` → `models/`, con `templates/` y `static/` |
 | `analytics/` | Modelos de análisis y notebooks |
@@ -208,7 +215,7 @@ El clustering del prototipo agrupaba texto libre en español (observaciones clí
 
 ## Datos, secretos y convenciones del repositorio
 
-`.gitignore` ignora el **contenido** de `data/`, `logs/` y `reports/` pero conserva la estructura de directorios vía `.gitkeep` (patrón `data/**` + `!data/**/` + `!data/**/.gitkeep`). Al crear subdirectorios ahí, añadir su `.gitkeep`. `legacy/data/` también está ignorado.
+`.gitignore` ignora el **contenido** de `data/`, `logs/` y `reports/` pero conserva la estructura de directorios vía `.gitkeep` (patrón `data/**` + `!data/**/` + `!data/**/.gitkeep`). **Ningún módulo arma rutas de salida por su cuenta**: todas salen de `core/rutas.py`, que además crea el `.gitkeep` al vuelo cuando aparece un subdirectorio nuevo. `legacy/data/` también está ignorado.
 
 Fuera del repositorio y necesarios para que el ETL funcione — hay que recrearlos en cada máquina:
 
