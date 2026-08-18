@@ -4,7 +4,7 @@ Sistema de gestión de equipos médicos (EEMM) de la unidad de Ingeniería Clín
 
 El objetivo es una aplicación web desplegada en la LAN del hospital que muestre el inventario de equipos, el estado de los mantenimientos y el análisis de fallas, alimentada por un ETL que consolida los datos hoy dispersos en Google Sheets y planillas Excel.
 
-> **Estado: en construcción.** La estructura del proyecto está definida y el entorno acondicionado, pero los módulos (`etl/`, `app/`, `database/`) todavía no tienen implementación. Se irán escribiendo desde cero.
+> **Estado: fase 2 en curso.** La base de datos esta operativa y el ETL ya carga los catalogos: 125 tipos de equipo y 133 unidades del hospital. Siguen el universo de equipos, las hojas de vida y las ordenes de trabajo. La aplicacion web (`app/`) todavia no empieza.
 
 ## Estructura
 
@@ -13,7 +13,7 @@ HRC-CEMS/
 ├── app/            Web Flask: rutas, servicios, modelos, plantillas, estáticos
 ├── etl/            Extracción, transformación, carga y contratos de datos
 ├── core/           Configuración y utilidades transversales
-├── database/       Esquema SQL, migraciones y datos semilla
+├── database/       Esquema SQL y migraciones numeradas
 ├── analytics/      Modelos de análisis y notebooks
 ├── data/           Datos de entrada y salida (contenido no versionado)
 ├── reports/        Figuras y exportaciones generadas (no versionado)
@@ -78,7 +78,9 @@ La configuración de ambas herramientas está en `pyproject.toml`. `legacy/` que
 
 ## Documentación
 
-- `CLAUDE.md`: guía del repositorio, flujo de datos previsto y glosario de siglas del dominio clínico.
+- `CLAUDE.md`: guía del repositorio, estado del código, flujo de datos y glosario de siglas del dominio clínico.
+- `docs/COMO_EJECUTAR.md`: cómo correr el ETL desde Spyder y dónde queda guardado cada dato.
+- `docs/PLAN_FASE_2.md`: el plan del ETL, con las decisiones cerradas y el orden de los cortes.
 - `legacy/ORIENTACION_PROYECTO.md`: diagnóstico del prototipo y hoja de ruta por fases.
 - `legacy/ESTRUCTURA_PROYECTO.md`: arquitectura propuesta con plantillas de referencia.
 - `legacy/GUIA_BASES_DATOS.md`: comparativa de motores SQL y pasos de migración.

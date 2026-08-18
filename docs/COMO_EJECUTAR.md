@@ -54,12 +54,28 @@ Los scripts se ubican solos: da lo mismo desde qué carpeta los ejecute Spyder.
 
 ## 3. Qué hace cada script
 
+Todos se ejecutan con F5 y se ubican solos: da lo mismo la carpeta de trabajo.
+
 | Script | Qué hace | Escribe en |
 |---|---|---|
-| `scripts/verificar_entorno.py` | Revisa que la máquina pueda correr el ETL | Nada |
-| `scripts/leer_hoja_google.py` | Lee una hoja del Sheet y muestra sus columnas | `data/raw/google_sheets/` |
+| `verificar_entorno.py` | Revisa que la máquina pueda correr el ETL | Nada |
+| `aplicar_migraciones.py` | Aplica los cambios pendientes al esquema de la base | La base |
+| `leer_hoja_google.py` | Lee una hoja del Sheet y muestra sus columnas | `data/raw/google_sheets/` |
+| `cargar_catalogos.py` | Carga `tipo_equipo` y `servicio_clinico` | La base y `data/processed/` |
 
-En `leer_hoja_google.py` se cambia la hoja editando la variable `HOJA` arriba del archivo y se vuelve a presionar F5. No hay que escribir nada en la consola.
+En `leer_hoja_google.py` se cambia la hoja editando la variable `HOJA` arriba del archivo y se vuelve a presionar F5. Ojo con `FILA_ENCABEZADO`: casi todas las hojas lo tienen en la fila 1, pero `Agenda` lleva su título arriba y el suyo está en la 2.
+
+### El orden en una máquina recién preparada
+
+1. `verificar_entorno.py` — hasta que diga *"Todo listo"*.
+2. `aplicar_migraciones.py` — deja la base al día. Correrlo de nuevo no repite nada.
+3. `cargar_catalogos.py` — carga los catálogos, que el resto del ETL necesita antes de cargar equipos.
+
+Cualquiera de ellos se puede volver a correr sin miedo: las cargas son idempotentes, así que repetirlas no duplica filas ni inventa historial.
+
+### Los cambios de esquema no se editan, se agregan
+
+`database/schema/` es el estado inicial de la base y **no se toca**. Todo cambio posterior es un archivo nuevo y numerado en `database/migrations/` (`001_...sql`, `002_...sql`), que solo agrega. El aplicador anota en la tabla `migracion` cuáles ya corrieron, así que saber en qué estado está una base es mirar una tabla.
 
 ## 4. Dónde se guarda cada cosa
 
@@ -68,7 +84,7 @@ Esta es la parte que conviene tener clara antes de generar datos. **Ningún mód
 | Carpeta | Qué contiene | Cuándo mirarla |
 |---|---|---|
 | `data/raw/` | Lo que se leyó, tal cual salió de la fuente | Para revisar un problema sin volver a consultar Google |
-| `data/interim/` | Lo mismo ya normalizado, antes de decidir qué entra | Para ver qué hizo la limpieza |
+| `data/interim/` | Reservado para pasos intermedios. Hoy no se usa | — |
 | `data/processed/` | Lo que efectivamente se cargó a la base | Para comparar contra la base |
 | `data/backups/` | Respaldos de la base de datos | Antes de un cambio grande |
 | `logs/` | El registro de cada corrida, un archivo por corrida | Cuando algo falla |

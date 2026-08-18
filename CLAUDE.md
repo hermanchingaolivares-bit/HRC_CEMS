@@ -10,29 +10,42 @@ El dominio, el código y los commits están **en español**: nombres de funcione
 
 ## Estado actual
 
-**Fase 1 cerrada** (17-ago-2026) y **fase 2 en curso: el ETL**. Lo que existe:
+**Fases 0 y 1 cerradas. Fase 2 en curso: cortes 0 y 1 terminados** (17-ago-2026).
 
-- **Estructura y configuración**: árbol de directorios, `requirements.txt`, `pyproject.toml`, `.env.example`, `.gitattributes`.
-- **Esquema de la base de datos**: `database/schema/` — `01_tablas.sql`, `02_disparadores.sql`, `03_vistas.sql`. Ya aplicado en la base `hrc_cems` de PostgreSQL local: 11 tablas y 2 vistas.
-- **Documentación**: este archivo, el `README.md` y los documentos de orientación en `legacy/`.
+| Dónde | Qué hay |
+|---|---|
+| Base `hrc_cems` | `database/schema/` aplicado: 11 tablas y 2 vistas. Migración `001` aplicada. **125 tipos de equipo** (12 críticos, 33 relevantes, 80 de IM>12) y **133 unidades** cargados desde las planillas |
+| `core/` | `rutas.py` (dónde se guarda cada cosa), `config.py` (lee el `.env`), `bd.py`, `bitacora.py` |
+| `etl/extract/` | `google_sheets.py` (API, todo texto) y `excel_hdv.py` (el `.xlsm` de 963 hojas) |
+| `etl/transform/` | `normalizar.py` (series, fechas chilenas, números), `columnas.py` (encabezados sin importar tildes), `resultado.py` (filas buenas, rechazos y contadores), `tipo_equipo.py`, `servicio_clinico.py` |
+| `etl/load/` | `registro.py` (el contexto `carga_en_curso`), `catalogos.py` (carga idempotente), `archivos.py` |
+| `scripts/` | `verificar_entorno.py`, `aplicar_migraciones.py`, `leer_hoja_google.py`, `cargar_catalogos.py` |
+| `tests/` | 114 pruebas rápidas y 4 de integración contra la base |
 
-- **Cortes 0 y 1 del ETL**. El corte 0 es la base sobre la que se apoyan los demás:
-  - `core/`: `rutas.py` (dónde se guarda cada cosa), `config.py` (lee el `.env`), `bd.py`, `bitacora.py`.
-  - `etl/transform/normalizar.py`: series, fechas chilenas y números, con 74 pruebas.
-  - `etl/extract/`: `google_sheets.py` (API, todo texto) y `excel_hdv.py` (el `.xlsm` de 963 hojas).
-  - `etl/load/registro.py`: el contexto `carga_en_curso`, que abre la fila en `carga`, declara la autoría del ETL y guarda los rechazos.
-  - `scripts/verificar_entorno.py` y `scripts/leer_hoja_google.py`, pensados para correr con F5 desde Spyder.
+Lo que **no** existe todavía: el universo de equipos, las hojas de vida, las órdenes de trabajo, las fallas y la app Flask. Los directorios `app/`, `analytics/` y `etl/contracts/` están vacíos.
 
-- **Corte 1: los catálogos**, cargados y verificados contra la base local el 17-ago-2026:
-  - `etl/transform/`: `resultado.py` (filas buenas, rechazos y contadores), `columnas.py` (busca encabezados sin importar tildes ni mayúsculas), `tipo_equipo.py` y `servicio_clinico.py`.
-  - `etl/load/`: `catalogos.py` (carga idempotente con `ON CONFLICT`) y `archivos.py` (copia de lo cargado en `data/processed/`).
-  - `scripts/aplicar_migraciones.py` y `scripts/cargar_catalogos.py`.
-  - `database/migrations/001_motivos_de_rechazo_de_catalogos.sql`, la primera migración: agrega los motivos `NOMBRE_DUPLICADO` y `VALOR_INVALIDO`, que los catálogos necesitan y el esquema de la fase 1 no tenía.
-  - En la base: **125 tipos de equipo** (12 críticos, 33 relevantes, 80 de IM>12) y **133 unidades**. Recargar no genera filas en `cambio`.
+**Siguiente: el corte 2**, el universo de equipos desde los dos `PMP` resueltos contra el `CATASTRO`. Su resultado está medido de antemano —781 equipos para 2026— así que sirve de prueba: si los números no dan, el error está en la transformación.
 
-Lo que **no** existe todavía: ni el universo de equipos, ni hojas de vida, ni órdenes de trabajo, ni fallas, ni app Flask. Los directorios `app/`, `analytics/` y `etl/contracts/` están vacíos.
+El plan de la fase 2 está en `docs/PLAN_FASE_2.md` y define una sola forma de hacer cada cosa; cómo ejecutar todo desde Spyder, en `docs/COMO_EJECUTAR.md`.
 
-Para ejecutar el proyecto desde Spyder y saber dónde queda cada dato: `docs/COMO_EJECUTAR.md`. El plan completo de la fase 2 esta en `docs/PLAN_FASE_2.md`: define una sola forma de hacer cada cosa y es lo que manda al escribir el ETL. Los catalogos `tipo_equipo` y `servicio_clinico` se cargan desde las planillas como cualquier otra fuente; no hay semillas escritas a mano y `database/seeds/` queda sin uso.
+### Cómo se ejecuta
+
+Todo se corre con F5 desde Spyder. Los scripts se ubican solos, así que da lo mismo la carpeta de trabajo.
+
+| Script | Qué hace | Escribe en |
+|---|---|---|
+| `verificar_entorno.py` | Revisa `.env`, credenciales, Excel, base y librerías | nada |
+| `aplicar_migraciones.py` | Aplica los `.sql` pendientes de `database/migrations/` | la base |
+| `leer_hoja_google.py` | Muestra una hoja del Sheet para inspeccionarla | `data/raw/` |
+| `cargar_catalogos.py` | Carga `tipo_equipo` y `servicio_clinico` | la base y `data/processed/` |
+
+**Los cambios de esquema no se editan: se agregan.** `database/schema/` es el estado inicial y no se toca. Todo cambio posterior es un archivo numerado en `database/migrations/`; el aplicador lleva la cuenta en la tabla `migracion`. Sin Alembic.
+
+Los catálogos se cargan desde las planillas como cualquier otra fuente: no hay semillas escritas a mano y `database/seeds/` queda sin uso.
+
+### Cómo trabajamos
+
+**Claude escribe el código; Herman lo ejecuta.** Al terminar un cambio, entregar los pasos concretos a ejecutar —en orden y chicos, para que un fallo se localice— en vez de correr los scripts, las pruebas o los comandos de entorno por cuenta propia.
 
 ### `legacy/` es referencia, no código a ejecutar
 
@@ -112,18 +125,20 @@ Las reglas que hacen funcionar el ETL. Algunas se rescatan del prototipo; otras 
 ```
 Google Sheets "EEMM" (API)  +  Excel HOJAS_DE_VIDA.xlsm (original en el servidor)
                     │
-                    ▼  extracción
-              data/raw/
+                    ▼  extracción          copia de evidencia en data/raw/
+             filas como texto
                     │
-                    ▼  normalización, una transformación por fuente
-              data/interim/
+                    ▼  transformación, una por fuente
+        filas validadas  +  rechazos con su motivo
                     │
-                    ▼  el PMP define el universo; el catastro aporta atributos
-              data/processed/  →  base de datos
+                    ▼  carga, una transacción por fuente
+              base de datos     copia de lo cargado en data/processed/
                     │
                     ▼
               analítica y reportes
 ```
+
+Ni `data/raw/` ni `data/processed/` son fuentes: son evidencia de cada corrida, para revisar un problema sin volver a consultar Google. `data/interim/` está declarado en `core/rutas.py` y hoy no se usa; queda para cuando una transformación necesite dejar su paso intermedio en disco.
 
 ### De dónde se leen las fuentes
 
@@ -147,7 +162,7 @@ Google Sheets "EEMM" (API)  +  Excel HOJAS_DE_VIDA.xlsm (original en el servidor
 
 **La fuente va a moverse de Google Sheets a OneDrive**, sin fecha definida. La capa de extracción tiene que poder cambiar sin arrastrar a las de transformación y carga.
 
-**Lo que no cuadra se reporta, no se borra.** El ETL parte de las dos hojas PMP, resuelve la serie contra el catastro y deja constancia de las discrepancias en `rechazo` (al 17-ago-2026: 31 series con plan que no existen en el catastro, 24 con plan que figuran como `NO APLICA`). El prototipo, en cambio, filtraba **sobreescribiendo los archivos procesados en sitio** y borrando los que quedaban vacíos: no reproducir eso — escribir a un directorio de salida distinto (de ahí `data/interim/`).
+**Lo que no cuadra se reporta, no se borra.** El ETL parte de las dos hojas PMP, resuelve la serie contra el catastro y deja constancia de las discrepancias en `rechazo` (al 17-ago-2026: 31 series con plan que no existen en el catastro, 24 con plan que figuran como `NO APLICA`). El prototipo, en cambio, filtraba **sobreescribiendo los archivos procesados en sitio** y borrando los que quedaban vacíos: no reproducir eso: la fuente nunca se sobreescribe, y lo descartado queda en `rechazo` en vez de desaparecer.
 
 **`SERIE` es la clave de unión universal**, normalizada siempre con `strip` + `upper`. Una sola celda puede contener varias series separadas por espacio, `:`, `/` o `//`: hay que separarlas y expandir a una fila por equipo. Todo se lee como texto (`dtype=str`) para que pandas no infiera tipos sobre datos sucios.
 
