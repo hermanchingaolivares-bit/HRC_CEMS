@@ -16,14 +16,21 @@ El dominio, el código y los commits están **en español**: nombres de funcione
 - **Esquema de la base de datos**: `database/schema/` — `01_tablas.sql`, `02_disparadores.sql`, `03_vistas.sql`. Ya aplicado en la base `hrc_cems` de PostgreSQL local: 11 tablas y 2 vistas.
 - **Documentación**: este archivo, el `README.md` y los documentos de orientación en `legacy/`.
 
-- **Corte 0 del ETL** (la base sobre la que se apoyan los demás cortes):
+- **Cortes 0 y 1 del ETL**. El corte 0 es la base sobre la que se apoyan los demás:
   - `core/`: `rutas.py` (dónde se guarda cada cosa), `config.py` (lee el `.env`), `bd.py`, `bitacora.py`.
   - `etl/transform/normalizar.py`: series, fechas chilenas y números, con 74 pruebas.
   - `etl/extract/`: `google_sheets.py` (API, todo texto) y `excel_hdv.py` (el `.xlsm` de 963 hojas).
   - `etl/load/registro.py`: el contexto `carga_en_curso`, que abre la fila en `carga`, declara la autoría del ETL y guarda los rechazos.
   - `scripts/verificar_entorno.py` y `scripts/leer_hoja_google.py`, pensados para correr con F5 desde Spyder.
 
-Lo que **no** existe todavía: ni las transformaciones por fuente, ni la carga de cada tabla, ni app Flask, ni migraciones versionadas. Los directorios `app/`, `analytics/` y `etl/contracts/` están vacíos, y también `database/migrations/`.
+- **Corte 1: los catálogos**, cargados y verificados contra la base local el 17-ago-2026:
+  - `etl/transform/`: `resultado.py` (filas buenas, rechazos y contadores), `columnas.py` (busca encabezados sin importar tildes ni mayúsculas), `tipo_equipo.py` y `servicio_clinico.py`.
+  - `etl/load/`: `catalogos.py` (carga idempotente con `ON CONFLICT`) y `archivos.py` (copia de lo cargado en `data/processed/`).
+  - `scripts/aplicar_migraciones.py` y `scripts/cargar_catalogos.py`.
+  - `database/migrations/001_motivos_de_rechazo_de_catalogos.sql`, la primera migración: agrega los motivos `NOMBRE_DUPLICADO` y `VALOR_INVALIDO`, que los catálogos necesitan y el esquema de la fase 1 no tenía.
+  - En la base: **125 tipos de equipo** (12 críticos, 33 relevantes, 80 de IM>12) y **133 unidades**. Recargar no genera filas en `cambio`.
+
+Lo que **no** existe todavía: ni el universo de equipos, ni hojas de vida, ni órdenes de trabajo, ni fallas, ni app Flask. Los directorios `app/`, `analytics/` y `etl/contracts/` están vacíos.
 
 Para ejecutar el proyecto desde Spyder y saber dónde queda cada dato: `docs/COMO_EJECUTAR.md`. El plan completo de la fase 2 esta en `docs/PLAN_FASE_2.md`: define una sola forma de hacer cada cosa y es lo que manda al escribir el ETL. Los catalogos `tipo_equipo` y `servicio_clinico` se cargan desde las planillas como cualquier otra fuente; no hay semillas escritas a mano y `database/seeds/` queda sin uso.
 

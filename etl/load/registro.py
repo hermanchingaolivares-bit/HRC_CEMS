@@ -34,6 +34,9 @@ MOTIVOS_VALIDOS = frozenset(
         "FECHA_INVALIDA",
         "SIN_PLAN",
         "TIPO_DESCONOCIDO",
+        # Agregados por la migracion 001, para los defectos de los catalogos.
+        "NOMBRE_DUPLICADO",
+        "VALOR_INVALIDO",
     }
 )
 
